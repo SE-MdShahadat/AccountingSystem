@@ -45,17 +45,45 @@ namespace AccountingSystemWebAPI.Controllers
             return CreatedAtAction(nameof(GetTransaction), new { id = transaction.TransactionId }, transaction);
         }
 
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> UpdateTransaction(int id, Transaction transaction)
+        //{
+        //    if (id != transaction.TransactionId)
+        //    {
+        //        return BadRequest();
+        //    }
+
+        //    _context.Entry(transaction).State = EntityState.Modified;
+        //    await _context.SaveChangesAsync();
+        //    return NoContent();
+        //}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTransaction(int id, Transaction transaction)
+        public async Task<IActionResult> UpdateTransaction(int id, Transaction updatedTransaction)
         {
-            if (id != transaction.TransactionId)
+            var existingTransaction = await _context.Transactions.FindAsync(id);
+
+            if (existingTransaction == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(transaction).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return NoContent();
+            if (!existingTransaction.RowVersion.SequenceEqual(updatedTransaction.RowVersion))
+            {
+                return Conflict(); // Return conflict response if versions don't match
+            }
+
+            _context.Entry(existingTransaction).State = EntityState.Detached;
+            _context.Entry(updatedTransaction).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(); // Handle concurrency conflict due to parallel updates
+            }
         }
 
         [HttpDelete("{id}")]

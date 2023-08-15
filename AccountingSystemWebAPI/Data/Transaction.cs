@@ -7,5 +7,6 @@
         public decimal Amount { get; set; }
         public string Description { get; set; }
         public int ClientId { get; internal set; }
+        public byte[] RowVersion { get; set; } // Adding a concurrency control field
     }
 }
